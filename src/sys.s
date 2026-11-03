@@ -331,11 +331,48 @@ sc_change_clock:
         .align  2
 sc_nop:
 sc_power_clear:
-sc_cd_player:
 sc_mpeg_check:
 sc_cd_init1:
         rts
         mov     #0, r0
+
+! sc_cd_player: games call it to leave to the system: on A+B+C+Start, or
+! when another disc is wanted (Grandia's disc 2 asks for disc 1). There is
+! no CD player: reset the machine with SMPC SYSRES, as the reset button
+! does, so the BIOS boots the disc now in the drive (Start opens the
+! manager first). If no reset comes, start the BIOS over. Does not return.
+        .align  2
+sc_cd_player:
+        mov     #0xF0, r0
+        extu.b  r0, r0
+        ldc     r0, sr                  ! mask interrupts
+        mov.l   c_cdp_ireg0, r0         ! end a peripheral INTBACK the game
+        mov     #0x40, r1               ! left waiting for its continue
+        mov.b   r1, @r0                 ! (BREAK; harmless otherwise)
+        mov.l   c_cdp_sf, r1            ! wait for the SMPC to be idle
+        mov.l   c_cdp_wait, r2
+1:      mov.b   @r1, r0
+        tst     #1, r0
+        bt      2f
+        dt      r2
+        bf      1b
+2:      mov     #1, r0
+        mov.b   r0, @r1                 ! SF = 1
+        mov.l   c_cdp_comreg, r3
+        mov     #0x0D, r0
+        mov.b   r0, @r3                 ! SYSRES
+        mov.l   c_cdp_wait, r2
+3:      dt      r2
+        bf      3b
+        mov.l   c_cdp_start, r0
+        jmp     @r0
+        nop
+        .align  2
+c_cdp_ireg0:    .long   0x20100001      ! SMPC IREG0
+c_cdp_sf:       .long   SMPC_SF
+c_cdp_comreg:   .long   SMPC_COMREG
+c_cdp_wait:     .long   0x00100000
+c_cdp_start:    .long   _start
 
 ! ---- SCU interrupt dispatch ---------------------------------------------
 ! One 8-byte entry per vector 0x40-0x5F pushes r0, loads the vector number

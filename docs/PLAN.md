@@ -352,6 +352,11 @@ Fixes found this way:
   cheat codes) is not supported and will not be: it runs the disc's
   security code, which calls into fixed places of Sega's BIOS ROM. Its
   JHL loader uses the load CD calls. Decided with the owner 2026-09-29.
+- The CD player call (0x26C) resets the console with SMPC SYSRES (or, if
+  no reset comes, jumps to the BIOS start): the BIOS boots the disc in the
+  drive, so A+B+C+Start restarts the game and Grandia's disc 2 boots disc 1
+  once it is swapped in (Mednafen). Sega's BIOS shows its CD player screen
+  instead.
 - SetScuInterruptMask writes the SCU mask from the slave CPU too (Yabause
   only does it on the master).
 - The first read file is loaded whole; sizes above the CD buffer (200
