@@ -330,8 +330,8 @@ Fixes found this way:
   (SBL layout); Yabause's HLE uses 22. Save format not yet checked against a
   dump from real hardware. BUP_Init ignores the library area. The manager
   draws save names and comments in ASCII and half-width katakana (JIS X 0201
-  0xA1-0xDF, own 5x7 glyphs), as Japanese games write them; other bytes are
-  blank.
+  0xA1-0xDF, own 5x7 glyphs), as Japanese games write them; other bytes from
+  0x80 up are blank.
   Blank internal backup RAM is formatted at boot. On MiSTer the core keeps
   backup RAM in memory and writes the game's .sav only with Autosave on
   (or "Save Backup RAM" in the OSD); confirmed across a power cycle

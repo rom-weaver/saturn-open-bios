@@ -29,8 +29,8 @@
 ! Drawing cells after the ASCII set (see tools/mkfont.py):
 !   0x60 full block, 0x61 horizontal rule, 0x62 block with a 1-pixel gap
 ! Half-width katakana (JIS X 0201 bytes 0xA1-0xDF) live in cells 0x100-0x13E
-! (VRAM 0x2000-0x27E0): con_puts maps byte b to cell b + 0x5F. They are kept
-! out of 0xA1-0xDF so the other high bytes keep their old (blank) cells.
+! (VRAM 0x2000-0x27E0): con_puts maps byte b to cell b + 0x5F. It draws the
+! other bytes from 0x80 up (e.g. Shift-JIS) as blanks.
 
 ! CELL_ADDR: r1 = map address of (r5 = column, r6 = row). Clobbers r5, r6.
         .macro  CELL_ADDR
@@ -144,7 +144,8 @@ c_kana_end:     .long   kana_end
 c_kana_dst:     .long   VDP2_VRAM + KANA_OFS
 
 ! con_puts: r4 = NUL-terminated string, r5 = column, r6 = row. Bytes
-! 0xA1-0xDF draw half-width katakana. Clobbers r0-r2, r4-r6.
+! 0xA1-0xDF draw half-width katakana, other bytes from 0x80 up a blank.
+! Clobbers r0-r2, r4-r6.
         .align  2
 con_puts:
         CELL_ADDR
@@ -161,7 +162,12 @@ con_puts:
         bt      3f                      ! not katakana
         bra     2f
         add     #0x5F, r0               ! byte 0xA1 -> cell 0x100
-3:      cmp/hs  r2, r0                  ! fold lowercase to uppercase
+3:      mov     #0x7F, r5
+        cmp/hi  r5, r0
+        bf      4f
+        bra     2f                      ! other high bytes: blank
+        mov     #' ', r0
+4:      cmp/hs  r2, r0                  ! fold lowercase to uppercase
         bf      2f
         add     #-0x20, r0
 2:      mov.w   r0, @r1
