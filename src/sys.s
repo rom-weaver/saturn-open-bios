@@ -338,40 +338,48 @@ sc_cd_init1:
 
 ! sc_cd_player: games call it to leave to the system: on A+B+C+Start, or
 ! when another disc is wanted (Grandia's disc 2 asks for disc 1). There is
-! no CD player: reset the machine with SMPC SYSRES, as the reset button
-! does, so the BIOS boots the disc now in the drive (Start opens the
-! manager first). If no reset comes, start the BIOS over. Does not return.
+! no CD player: stop the game's hardware and start the BIOS over, so it
+! boots the disc now in the drive. Held buttons open the manager first, as
+! A+B+C+Start opens the system menu on a real Saturn. Not SMPC SYSRES: it
+! hangs Kronos and does nothing in Yabause. CKCHG320 resets VDP1/2, SCU
+! and SCSP, stops the slave and 68000 and leaves the clock in 320 mode
+! (the game may have picked 352). Does not return.
         .align  2
 sc_cd_player:
         mov     #0xF0, r0
         extu.b  r0, r0
         ldc     r0, sr                  ! mask interrupts
-        mov.l   c_cdp_ireg0, r0         ! end a peripheral INTBACK the game
-        mov     #0x40, r1               ! left waiting for its continue
-        mov.b   r1, @r0                 ! (BREAK; harmless otherwise)
-        mov.l   c_cdp_sf, r1            ! wait for the SMPC to be idle
-        mov.l   c_cdp_wait, r2
-1:      mov.b   @r1, r0
-        tst     #1, r0
-        bt      2f
-        dt      r2
-        bf      1b
-2:      mov     #1, r0
-        mov.b   r0, @r1                 ! SF = 1
-        mov.l   c_cdp_comreg, r3
-        mov     #0x0D, r0
-        mov.b   r0, @r3                 ! SYSRES
-        mov.l   c_cdp_wait, r2
-3:      dt      r2
-        bf      3b
+        mov.l   c_cdp_ims, r1           ! mask SCU interrupts
+        mov.l   c_cdp_ims_all, r0
+        mov.l   r0, @r1
+        mov.l   c_cdp_d0en, r1          ! stop SCU DMA levels 0-2
+        mov     #0, r0
+        mov.l   r0, @r1
+        mov.l   r0, @(0x20, r1)
+        add     #0x40, r1
+        mov.l   r0, @r1
+        mov.l   c_cdp_ireg0, r1         ! end a peripheral INTBACK the game
+        mov     #0x40, r0               ! left waiting for its continue
+        mov.b   r0, @r1                 ! (BREAK; harmless otherwise)
+        mov.l   c_cdp_cmd, r8
+        mov     #0x03, r4               ! SSHOFF
+        jsr     @r8
+        nop
+        mov     #0x07, r4               ! SNDOFF
+        jsr     @r8
+        nop
+        mov     #0x0F, r4               ! CKCHG320
+        jsr     @r8
+        nop
         mov.l   c_cdp_start, r0
         jmp     @r0
         nop
         .align  2
+c_cdp_ims:      .long   SCU_IMS
+c_cdp_ims_all:  .long   0x0000BFFF
+c_cdp_d0en:     .long   0x25FE0010      ! D0EN; D1EN +0x20, D2EN +0x40
 c_cdp_ireg0:    .long   0x20100001      ! SMPC IREG0
-c_cdp_sf:       .long   SMPC_SF
-c_cdp_comreg:   .long   SMPC_COMREG
-c_cdp_wait:     .long   0x00100000
+c_cdp_cmd:      .long   smpc_cmd
 c_cdp_start:    .long   _start
 
 ! ---- SCU interrupt dispatch ---------------------------------------------
