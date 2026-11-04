@@ -310,7 +310,7 @@ attract mode.
 |---|---|---|
 | Yabause (`-b file`) | Yes | Current loop. Also has an HLE BIOS (`-nb`), useful as a behavioural reference. |
 | Kronos (libretro) | Yes | Main emulator reference; optional SH-2 cache emulation (`kronos_usecache`). |
-| Mednafen 1.29 | Yes, under any name not used by Sega's files | Only files named like Sega's (`sega_101.bin`, `mpr-17933.bin`, ...) are hash-checked. `make run-mednafen` / `run-image-mednafen` (`tools/run-mednafen.sh`), headless. |
+| Mednafen 1.29 | Yes, with `-ss.bios_sanity 0` | Without it, files named like Sega's (`sega_101.bin`, `mpr-17933.bin`, ...) are hash-checked and rejected. `make run-mednafen` / `run-image-mednafen` (`tools/run-mednafen.sh`), headless. |
 | MiSTer Saturn core | Yes (`boot.rom` is user supplied) | Boots the tested games; models the SH-2 caches, CD block FIFO timing and bus contention that emulators skip. |
 | Real hardware | Later | 27C4096 EPROM swap. |
 
