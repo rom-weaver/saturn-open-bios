@@ -355,6 +355,12 @@ Fixes found this way:
   cheat codes) is not supported and will not be: it runs the disc's
   security code, which calls into fixed places of Sega's BIOS ROM. Its
   JHL loader uses the load CD calls. Decided with the owner 2026-09-29.
+- The CD player call (0x26C) stops SCU DMA, the slave and the 68000, resets
+  the hardware with SMPC CKCHG320 and jumps to the BIOS start: the BIOS
+  boots the disc in the drive, so A+B+C+Start restarts the game (through
+  the manager, as Start is still held) and Grandia's disc 2 boots disc 1
+  once it is swapped in (Mednafen). Not SYSRES: Kronos hangs on it and
+  Yabause ignores it. Sega's BIOS shows its CD player screen instead.
 - SetScuInterruptMask writes the SCU mask from the slave CPU too (Yabause
   only does it on the master).
 - The first read file is loaded whole; sizes above the CD buffer (200

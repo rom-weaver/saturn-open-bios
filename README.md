@@ -69,8 +69,11 @@ of the data track) instead of the CD music. This is not a BIOS issue.
 
 ## Known limitations
 
-- **No audio CD player.** A music CD does not play; the "CD player" system
-  call some games use when quitting does nothing.
+- **No audio CD player.** A music CD does not play. The "CD player" system
+  call games make on A+B+C+Start, or when they ask for another disc
+  (Grandia), resets the console: the BIOS starts again and boots the disc
+  in the drive. After A+B+C+Start the held Start opens the save manager
+  first; press Start there to boot.
 - **No Video CD / Photo CD.** They need the MPEG card, which the BIOS
   reports as absent (the MiSTer core does not emulate it either).
 - **No floppy drive** (the Saturn's backup floppy): only the internal

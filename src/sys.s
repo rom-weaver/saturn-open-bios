@@ -331,7 +331,6 @@ sc_change_clock:
         .align  2
 sc_nop:
 sc_power_clear:
-sc_cd_player:
 sc_mpeg_check:
 sc_cd_init1:
         rts
@@ -516,3 +515,78 @@ clock_scu_tab:
 clock_scsp_tab:
         .long   0x25B00400, 0x0200              ! MEM4MB, MVOL 0 (as at boot)
         .long   0
+
+! sc_cd_player: games call it to leave to the system: on A+B+C+Start, or
+! when another disc is wanted (Grandia's disc 2 asks for disc 1). There is
+! no CD player: stop the game's hardware and start the BIOS over, so it
+! boots the disc now in the drive. Held buttons open the manager first, as
+! A+B+C+Start opens the system menu on a real Saturn. Not SMPC SYSRES: it
+! hangs Kronos and does nothing in Yabause. CKCHG320 resets VDP1/2, SCU
+! and SCSP, stops the slave and 68000 and leaves the clock in 320 mode
+! (the game may have picked 352). Does not return.
+        .align  2
+sc_cd_player:
+        mov     #0xF0, r0
+        extu.b  r0, r0
+        ldc     r0, sr                  ! mask interrupts
+        mov.l   c_cdp_ims, r1           ! mask SCU interrupts
+        mov.l   c_cdp_ims_all, r0
+        mov.l   r0, @r1
+        mov.l   c_cdp_d0en, r1          ! stop SCU DMA levels 0-2
+        mov     #0, r0
+        mov.l   r0, @r1
+        mov.l   r0, @(0x20, r1)
+        add     #0x40, r1
+        mov.l   r0, @r1
+        mov.l   c_cdp_ireg0, r1         ! end a peripheral INTBACK the game
+        mov     #0x40, r0               ! left waiting for its continue
+        mov.b   r0, @r1                 ! (BREAK; harmless otherwise)
+        mov.l   c_cdp_iosel, r1         ! both pad ports back to SMPC
+        mov     #0, r0                  ! control (IOSEL) and no external
+        mov.b   r0, @r1                 ! latch (EXLE), as after a reset
+        mov.b   r0, @(2, r1)
+        .ifdef  DIAG                    ! no post-mortem page: this is a
+        mov.l   c_cdp_diag, r1          ! restart, not a hang
+        mov.l   r0, @r1
+        .endif
+        mov.l   c_cdp_vbr, r0           ! CKCHG sends an NMI: take it with
+        ldc     r0, vbr                 ! the BIOS table's rte stub, not a
+        mov.l   c_cdp_rte, r1           ! handler the game may have put in
+        mov.l   r1, @(0x2C, r0)         ! vector 11
+        mov.l   c_cdp_cmd, r8
+        mov     #0x03, r4               ! SSHOFF
+        jsr     @r8
+        nop
+        mov     #0x07, r4               ! SNDOFF
+        jsr     @r8
+        nop
+        mov     #0x0F, r4               ! CKCHG320
+        jsr     @r8
+        nop
+        mov.l   c_cdp_dmaor, r1         ! the NMI set DMAOR.NMIF, which
+        mov.l   @r1, r0                 ! blocks SH-2 DMA: read, then write
+        mov     #0, r0                  ! 0 to clear it, as after a reset;
+        mov.l   r0, @r1                 ! stop both channels the same way
+        mov.l   c_cdp_chcr0, r1
+        mov.l   @r1, r2
+        mov.l   r0, @r1
+        mov.l   @(0x10, r1), r2         ! CHCR1
+        mov.l   r0, @(0x10, r1)
+        mov.l   c_cdp_start, r0
+        jmp     @r0
+        nop
+        .align  2
+c_cdp_ims:      .long   SCU_IMS
+c_cdp_ims_all:  .long   0x0000BFFF
+c_cdp_d0en:     .long   0x25FE0010      ! D0EN; D1EN +0x20, D2EN +0x40
+c_cdp_ireg0:    .long   0x20100001      ! SMPC IREG0
+c_cdp_iosel:    .long   0x2010007D      ! SMPC IOSEL; EXLE +2
+        .ifdef  DIAG
+c_cdp_diag:     .long   DIAG_MAGIC      ! (diag.s)
+        .endif
+c_cdp_vbr:      .long   0x06000000      ! master vector table
+c_cdp_rte:      .long   RTE_STUB
+c_cdp_dmaor:    .long   0xFFFFFFB0      ! SH-2 DMAOR
+c_cdp_chcr0:    .long   0xFFFFFF8C      ! SH-2 CHCR0; CHCR1 +0x10
+c_cdp_cmd:      .long   smpc_cmd
+c_cdp_start:    .long   _start

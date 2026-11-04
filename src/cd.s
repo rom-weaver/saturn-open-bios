@@ -94,6 +94,11 @@ cd_init:
         mov     r0, r4
         tst     r0, r0
         bf      9f
+        mova    cmd_resetall_e, r0      ! filters, partitions and buffered
+        bsr     cd_cmdt                 ! sectors back to their defaults: a
+        mov     r0, r4                  ! game that called the CD player
+        tst     r0, r0                  ! (0x26C) may have left a filter
+        bf      9f                      ! range or full partitions
         mova    cmd_status_e, r0
         bsr     cd_cmdt
         mov     r0, r4
@@ -356,6 +361,7 @@ cmd_gettoc_e:   .word   0x0200, 0x0000, 0x0000, 0x0000  ! Get TOC
 cmd_hwinfo_e:   .word   0x0100, 0x0000, 0x0000, 0x0000  ! Get hardware info
 cmd_init_e:     .word   0x0400, 0xFFFF, 0xFFFF, 0xFFFF  ! Initialize CD system (no changes)
 cmd_status_e:   .word   0x0000, 0x0000, 0x0000, 0x0000  ! Get CD status
+cmd_resetall_e: .word   0x48FC, 0x0000, 0x0000, 0x0000  ! Reset selector: all flags
 
 ! cd_read_ip: read FAD 150 (the first data sector, start of IP.BIN) into
 ! 0x06002000 and keep its first 16 bytes as a string in CD_HDR. The CD

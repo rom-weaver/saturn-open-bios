@@ -12,6 +12,7 @@
         .global wram_clear
         .global vbr_init
         .global smpc_init
+        .global smpc_cmd
         .global scu_init
         .global scsp_init
         .global vdp1_init
