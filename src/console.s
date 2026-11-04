@@ -18,6 +18,8 @@
         .equ    VDP2_REGS,  0x25F80000
         .equ    MAP_OFS,    0x40000         ! bank B0, map register value 0x20
         .equ    FONT_OFS,   0x20 * 32       ! first glyph is ' ' (0x20)
+        .equ    KANA_CELL,  0x100           ! cell of byte 0xA1 (see below)
+        .equ    KANA_OFS,   KANA_CELL * 32
         .equ    BACK_OFS,   0x7FFFE         ! last VRAM word holds the back colour
         .equ    GRAD_OFS,   0x7FC00         ! back colour per line (256 words)
 
@@ -26,6 +28,9 @@
 !   8-14 a fade from near white to red (the boot title)
 ! Drawing cells after the ASCII set (see tools/mkfont.py):
 !   0x60 full block, 0x61 horizontal rule, 0x62 block with a 1-pixel gap
+! Half-width katakana (JIS X 0201 bytes 0xA1-0xDF) live in cells 0x100-0x13E
+! (VRAM 0x2000-0x27E0): con_puts maps byte b to cell b + 0x5F. It draws the
+! other bytes from 0x80 up (e.g. Shift-JIS) as blanks.
 
 ! CELL_ADDR: r1 = map address of (r5 = column, r6 = row). Clobbers r5, r6.
         .macro  CELL_ADDR
@@ -77,6 +82,16 @@ vdp2_init:
         bf/s    3b
         add     #4, r3
 
+        ! Copy the half-width katakana to cells KANA_CELL.. (VRAM 0x2000)
+        mov.l   c_kana, r1
+        mov.l   c_kana_end, r2
+        mov.l   c_kana_dst, r3
+3:      mov.l   @r1+, r0
+        mov.l   r0, @r3
+        cmp/hs  r2, r1
+        bf/s    3b
+        add     #4, r3
+
         ! Palettes 0-6: index 1 = ink (index 0 is transparent)
         mova    inks, r0
         mov     r0, r2
@@ -121,16 +136,38 @@ vdp2_init:
 5:      rts
         nop
 
-! con_puts: r4 = NUL-terminated string, r5 = column, r6 = row
+        .align  2                       ! constants near their users (mov.w reach)
+c_nregs:        .word   0x120 / 2
+c_cram_longs:   .word   0x1000 / 4
+c_kana:         .long   kana_data
+c_kana_end:     .long   kana_end
+c_kana_dst:     .long   VDP2_VRAM + KANA_OFS
+
+! con_puts: r4 = NUL-terminated string, r5 = column, r6 = row. Bytes
+! 0xA1-0xDF draw half-width katakana, other bytes from 0x80 up a blank.
+! Clobbers r0-r2, r4-r6.
         .align  2
 con_puts:
         CELL_ADDR
         mov     #0x60, r2
+        mov     #0x3E, r6               ! 0xDF - 0xA1
 1:      mov.b   @r4+, r0
         extu.b  r0, r0
         tst     r0, r0
         bt      9f
-        cmp/hs  r2, r0                  ! fold lowercase to uppercase
+        mov     r0, r5
+        add     #-0x7F, r5
+        add     #-0x22, r5              ! r5 = byte - 0xA1
+        cmp/hi  r6, r5
+        bt      3f                      ! not katakana
+        bra     2f
+        add     #0x5F, r0               ! byte 0xA1 -> cell 0x100
+3:      mov     #0x7F, r5
+        cmp/hi  r5, r0
+        bf      4f
+        bra     2f                      ! other high bytes: blank
+        mov     #' ', r0
+4:      cmp/hs  r2, r0                  ! fold lowercase to uppercase
         bf      2f
         add     #-0x20, r0
 2:      mov.w   r0, @r1
@@ -271,8 +308,6 @@ c_font_dst:     .long   VDP2_VRAM + FONT_OFS
 c_cram:         .long   VDP2_CRAM
 c_back:         .long   VDP2_VRAM + BACK_OFS
 c_map:          .long   VDP2_VRAM + MAP_OFS
-c_nregs:        .word   0x120 / 2
-c_cram_longs:   .word   0x1000 / 4
 c_grad:         .long   VDP2_VRAM + GRAD_OFS
 c_backcol:      .word   0x8000 | (2 << 10) | (0 << 5) | 12   ! dark red
 c_end:          .word   0xFFFF
