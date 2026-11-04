@@ -582,7 +582,7 @@ c_cdp_d0en:     .long   0x25FE0010      ! D0EN; D1EN +0x20, D2EN +0x40
 c_cdp_ireg0:    .long   0x20100001      ! SMPC IREG0
 c_cdp_iosel:    .long   0x2010007D      ! SMPC IOSEL; EXLE +2
         .ifdef  DIAG
-c_cdp_diag:     .long   0x26000C9C      ! diag.s DIAG_MAGIC
+c_cdp_diag:     .long   DIAG_MAGIC      ! (diag.s)
         .endif
 c_cdp_vbr:      .long   0x06000000      ! master vector table
 c_cdp_rte:      .long   RTE_STUB

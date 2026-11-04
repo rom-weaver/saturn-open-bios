@@ -30,6 +30,7 @@
         .global diag_postmortem
         .global diag_start_swdt
         .global DIAG_SLAVE
+        .global DIAG_MAGIC
 
         .equ    DIAG,       0x26000C80      ! variables, cache-through
         .equ    DIAG_COUNT, DIAG + 0x00     ! VBlank-IN interrupts seen
