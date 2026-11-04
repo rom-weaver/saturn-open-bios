@@ -13,7 +13,10 @@ DISC=${1:-$ROOT/build/testdisc.iso}
 OUT=${2:-$ROOT/build/screen.png}
 WAIT=${WAIT:-12}
 BIOS=${BIOS:-$ROOT/build/saturn-open-bios.bin}
+test -f "$DISC" || { echo "no disc image: $DISC" >&2; exit 1; }
 TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+trap 'exit 1' INT TERM HUP
 DISC=$(cd "$(dirname "$DISC")" && pwd)/$(basename "$DISC")
 BIOS=$(cd "$(dirname "$BIOS")" && pwd)/$(basename "$BIOS")
 # Mednafen needs a cue sheet for a plain .iso
@@ -29,7 +32,10 @@ timeout $((WAIT + 28)) xvfb-run -a -s "-screen 0 1024x768x24" sh -c '
   MEDNAFEN_HOME="$TMP/home" mednafen -force_module ss -filesys.untrusted_fip_check 0 \
     -ss.bios_jp "$BIOS" -ss.bios_na_eu "$BIOS" -ss.cart auto -sound 0 -video.fs 0 \
     "$DISC" >"$TMP/log" 2>&1 &
-  sleep '"$WAIT"'; xwd -root -silent >"$TMP/shot.xwd"; kill $! 2>/dev/null || true'
+  sleep '"$WAIT"'
+  # Mednafen already gone: it rejected the disc or the BIOS
+  kill -0 $! 2>/dev/null || { tail -5 "$TMP/log" >&2; exit 1; }
+  xwd -root -silent >"$TMP/shot.xwd"; kill $! 2>/dev/null; wait $! 2>/dev/null || true'
 convert "$TMP/shot.xwd" -crop 906x720+0+0 +repage "$OUT"
 echo "screenshot: $OUT"
 convert "$OUT" -format "%c" histogram:info:- | sort -rn | head -3
