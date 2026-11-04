@@ -91,12 +91,13 @@ of the data track) instead of the CD music. This is not a BIOS issue.
   more per interrupt before a game's handler runs (measured on MiSTer).
   No game has been seen to mind.
 - **Not tested on a real Saturn**: only on MiSTer and in emulators (Kronos,
-  Yabause). A real console also needs the SDRAM set-up done by Sega's BIOS
+  Yabause, Mednafen). A real console also needs the SDRAM set-up done by Sega's BIOS
   checked more closely.
 - **Details not yet checked against real hardware**: the backup RAM save
   format (only against emulators and games), clock changes skip the
   standby handshake of the real hardware, and first programs larger than
-  the CD block's buffer (200 sectors) have not been tried.
+  the CD block's buffer (200 sectors) have only been tried in emulators
+  (up to 328 sectors).
 - In Kronos some games stop earlier than on MiSTer (see the table); on
   MiSTer all tested games play.
 
@@ -132,6 +133,7 @@ OSD, or use "Save Backup RAM" while the game is loaded.
     sudo apt install binutils-sh-elf yabause xvfb x11-apps imagemagick
     make          # -> build/saturn-open-bios.bin (512 KB), the ROM image
     make run      # boots the test disc in Yabause headlessly, saves build/screen.png
+    make run-mednafen   # the same in Mednafen (apt install mednafen xdotool)
     make diag     # a build with diagnostics pages, in build/diag/
 
 The version shown on screen comes from `git describe`. Layout: `src/` SH-2
@@ -155,8 +157,9 @@ hardware state it leaves behind. The disc's security code is never run.
   the backup RAM library follow in behaviour, including the default SCU
   interrupt priority order; the CD block command protocol follows its CD
   block emulation (`cs2.c`), the disc boot path its quick-load code, and
-  several post-boot register values its set-up. Yabause 0.9.15 is also the
-  automated test emulator (`make run`).
+  several post-boot register values its set-up. Yabause 0.9.15 is also an
+  automated test emulator (`make run`), as is Mednafen 1.29
+  (`make run-mednafen`).
 - **[Kronos](https://github.com/FCare/Kronos)** (GPL-2.0-or-later) - the
   main emulator for testing (RetroArch core), and a reference for the SMPC.
 - **Mednafen / Beetle Saturn** (GPL-2.0-or-later) - a reference for the
