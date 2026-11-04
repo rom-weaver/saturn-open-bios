@@ -25,6 +25,10 @@ shot_init() {
 shot_run() {
   SHOT_CLASS=$2 SHOT_CMD=$4
   export DISC BIOS TMP SHOT_CLASS SHOT_CMD
+  # In the background so Ctrl-C runs the trap at once: timeout puts itself
+  # in its own process group, so the terminal's SIGINT never reaches it,
+  # and a trap is deferred while a foreground command runs. The trap's TERM
+  # makes timeout signal its whole group (Xvfb and the emulator).
   timeout $((WAIT + 28)) xvfb-run -a -s "-screen 0 $1" sh -c '
     sh -c "exec $SHOT_CMD" >"$TMP/log" 2>&1 &
     sleep '"$WAIT"'
@@ -38,7 +42,10 @@ shot_run() {
     # Yabause ignores SIGTERM, so kill it after 5 s
     kill $! 2>/dev/null
     for i in 1 2 3 4 5; do kill -0 $! 2>/dev/null || break; sleep 1; done
-    kill -9 $! 2>/dev/null; wait $! 2>/dev/null || true'
+    kill -9 $! 2>/dev/null; wait $! 2>/dev/null || true' &
+  SHOT_PID=$!
+  trap 'kill "$SHOT_PID" 2>/dev/null; exit 1' INT TERM HUP
+  wait "$SHOT_PID"
   if [ -n "$3" ]; then
     convert "$TMP/shot.xwd" -crop "$3" +repage "$OUT"
   else
