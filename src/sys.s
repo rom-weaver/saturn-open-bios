@@ -361,6 +361,10 @@ sc_cd_player:
         mov.l   c_cdp_ireg0, r1         ! end a peripheral INTBACK the game
         mov     #0x40, r0               ! left waiting for its continue
         mov.b   r0, @r1                 ! (BREAK; harmless otherwise)
+        mov.l   c_cdp_vbr, r0           ! CKCHG sends an NMI: take it with
+        ldc     r0, vbr                 ! the BIOS table's rte stub, not a
+        mov.l   c_cdp_rte, r1           ! handler the game may have put in
+        mov.l   r1, @(0x2C, r0)         ! vector 11
         mov.l   c_cdp_cmd, r8
         mov     #0x03, r4               ! SSHOFF
         jsr     @r8
@@ -371,6 +375,15 @@ sc_cd_player:
         mov     #0x0F, r4               ! CKCHG320
         jsr     @r8
         nop
+        mov.l   c_cdp_dmaor, r1         ! the NMI set DMAOR.NMIF, which
+        mov.l   @r1, r0                 ! blocks SH-2 DMA: read, then write
+        mov     #0, r0                  ! 0 to clear it, as after a reset;
+        mov.l   r0, @r1                 ! stop both channels the same way
+        mov.l   c_cdp_chcr0, r1
+        mov.l   @r1, r2
+        mov.l   r0, @r1
+        mov.l   @(0x10, r1), r2         ! CHCR1
+        mov.l   r0, @(0x10, r1)
         mov.l   c_cdp_start, r0
         jmp     @r0
         nop
@@ -379,6 +392,10 @@ c_cdp_ims:      .long   SCU_IMS
 c_cdp_ims_all:  .long   0x0000BFFF
 c_cdp_d0en:     .long   0x25FE0010      ! D0EN; D1EN +0x20, D2EN +0x40
 c_cdp_ireg0:    .long   0x20100001      ! SMPC IREG0
+c_cdp_vbr:      .long   0x06000000      ! master vector table
+c_cdp_rte:      .long   RTE_STUB
+c_cdp_dmaor:    .long   0xFFFFFFB0      ! SH-2 DMAOR
+c_cdp_chcr0:    .long   0xFFFFFF8C      ! SH-2 CHCR0; CHCR1 +0x10
 c_cdp_cmd:      .long   smpc_cmd
 c_cdp_start:    .long   _start
 
